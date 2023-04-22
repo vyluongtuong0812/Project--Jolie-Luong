@@ -1,0 +1,92 @@
+#import json
+import ast
+import pandas as pd
+import os
+
+cols = ['ItemId', 'Mac', 'SessionMainMenu',
+        'AppName', 'LogId', 'Event', 'RealTimePlaying']
+        
+dir_path = os.getcwd()
+
+filenames = []
+filenames.append('logt21.txt')
+filenames.append('logt22.txt')
+filenames.append('logt23.txt')
+filenames.append('logt24.txt')
+filenames.append('logt25.txt')
+filenames.append('logt31.txt')
+filenames.append('logt32.txt')
+
+for filename in filenames:
+    file = open(dir_path + '/datasource' + '/' + filename, 'r')
+    lines = file.readlines()
+    dataList = []
+
+    for line in lines:
+        line = ast.literal_eval(line)
+        dataList.append(line)
+
+    df = pd.DataFrame(dataList)
+    df = df[cols]
+    with open(dir_path+'/result' + '/'+filename, 'a') as f:
+        dfAsString = df.to_csv(index=False, sep='\t',  lineterminator="\n")
+        print(dfAsString)
+        f.write(dfAsString)
+
+#Question2
+
+# Đọc dữ liệu từ các file log đã parse
+df_logt21 = pd.read_csv("result/logt21.txt", delimiter="\t", low_memory=False)
+df_logt22 = pd.read_csv("result/logt22.txt", delimiter="\t", low_memory=False)
+df_logt23 = pd.read_csv("result/logt23.txt", delimiter="\t", low_memory=False)
+df_logt24 = pd.read_csv("result/logt24.txt", delimiter="\t", low_memory=False)
+df_logt25 = pd.read_csv("result/logt25.txt", delimiter="\t", low_memory=False)
+df_logt31 = pd.read_csv("result/logt31.txt", delimiter="\t", low_memory=False)
+df_logt32 = pd.read_csv("result/logt32.txt", delimiter="\t", low_memory=False)
+
+
+
+# Đọc dữ liệu từ file user_info.txt
+df_user_info = pd.read_csv("datasource/user_info.txt", delimiter="\t", low_memory=False)
+
+# Đổi tên cột 'MAC' thành 'Mac' trong df_user_info
+df_user_info = df_user_info.rename(columns={'MAC': 'Mac'})
+#Loại bỏ 4 Kí tự đầu "FBOX"
+df_user_info['Mac'] = df_user_info['Mac'].str[4:]
+
+
+# Kết hợp các bảng dữ liệu với nhau
+df_merged = pd.concat([df_logt21, df_logt22, df_logt23, df_logt24, df_logt25, df_logt31, df_logt32], ignore_index=True)
+df_merged2 = pd.merge(df_merged, df_user_info, on='Mac')
+
+
+
+#Phân tích
+# Số lượng user
+num_users = len(df_merged2['Mac'].unique())
+print("Tổng số user: ", num_users)
+
+# Số lần sử dụng của từng ứng dụng
+app_counts = df_merged2['AppName'].value_counts()
+print("Số lần sử dụng của từng ứng dụng:")
+print(app_counts)
+
+# Số lần sử dụng của từng loại chức năng chính
+session_counts = df_merged2['SessionMainMenu'].value_counts()
+print("Số lần sử dụng của từng loại chức năng chính:")
+print(session_counts)
+
+#Tổng thời lượng xem của từng user:
+user_total_watch_time = df_merged2.groupby('Mac')['RealTimePlaying'].sum()
+print("Tổng thời lượng xem của từng user:")
+print(user_total_watch_time)
+
+
+#Tổng thời lượng xem của mỗi chương trình:
+item_total_watch_time = df_merged2.groupby('ItemId')['RealTimePlaying'].sum()
+print("Tổng thời lượng xem của mỗi chương trình:")
+print(item_total_watch_time)
+
+# Tiếp tục xử lý dữ liệu và lưu kết quả vào file output.txt
+df_merged.to_csv("result/output.txt", sep="\t", index=False)
+
